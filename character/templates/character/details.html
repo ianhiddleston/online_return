@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>title</title>
+  </head>
+  <body>
+    <h1>Character Home</h1>
+    <p><a href='{% url 'character:index' %}'>Return to Character Home</a></p>
+    <h1>Character List</h1>
+    <p><a href='{% url 'character:list' %}'>Return to Character List</a></p>
+    <h1>Character Details</h1>
+    <ul>
+      <li><p>Name : {{ character.name }}</p></li>
+      <li><p>Race : {{ character.race }}</p></li>
+      <li><p>Nationality : {{ character.nationality }}</p></li>
+      <li><p>State : {{ character.get_state_display }}</p></li>
+      <li><p>Resurrected : {{ character.resurrected }}</p></li>
+      <li><p>Excommunicated : {{ character.excommunicated }}</p></li>
+      <ul>
+        <h2>Guilds : </h2>
+        {% for guild in character.guilds.all %}
+        <li>{{guild.name}}</li>
+        {% endfor %}
+      </ul>
+      <li>
+        <h2>Languages : </h2>
+        <ul>
+          {% for language in character.languages.all %}
+          <li>{{language}}</li>
+          {% endfor %}
+        </ul>
+      </li>
+    </ul>
+  </body>
+</html>

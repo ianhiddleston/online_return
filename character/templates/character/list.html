@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>title</title>
+  </head>
+  <body>
+    <h2>Current Characters</h2>
+    {% if current_characters %}
+      <ul>
+      {% for character in current_characters %}
+          <li><a href='{% url 'character:details' character.id %}'>{{ character.name }}</a></li>
+      {% endfor %}
+      </ul>
+    {% else %}
+      <p>No current characters are available.</p>
+    {% endif %}
+  <h2>Previous Characters</h2>
+    {% if previous_characters %}
+      <ul>
+      {% for character in previous_characters %}
+          <li><a href='{% url 'character:details' character.id %}'>{{ character.name }}</a></li>
+      {% endfor %}
+      </ul>
+    {% else %}
+        <p>No previous characters are available.</p>
+    {% endif %}
+  </body>
+</html>

@@ -1,4 +1,5 @@
 from django.db import models
+from django.conf import settings
 from django.core.validators import RegexValidator
 from datetime import datetime
 from django.contrib.auth.models import User
@@ -20,7 +21,7 @@ class Branch(models.Model):
 
 
 class Player(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True)
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, primary_key=True)
     phone_regex = RegexValidator(regex=r'^\+?1?\d{9,15}$', message="Phone number must be entered in the format: '+999999999'. UK numbers are +44 and drop leading '0'. For example +441632962499. Up to 15 digits allowed.")
     branch = models.ForeignKey(Branch, on_delete=models.CASCADE, null=True, blank=True)
     phone_number = models.CharField(validators=[phone_regex], max_length=17, blank=True) # validators should be a list
@@ -90,6 +91,7 @@ class Guild(models.Model):
 class GuildRank(models.Model):
     name = models.CharField(max_length=100)
     guild = models.ForeignKey(Guild, on_delete=models.CASCADE)
+    social_standing = models.PositiveIntegerField()
     restricted = models.BooleanField()
     
     def __str__(self):
@@ -115,7 +117,7 @@ class Character(models.Model):
     nationality = models.ForeignKey(Nationality, on_delete=models.CASCADE)
     languages = models.ManyToManyField(Language)
     guilds = models.ManyToManyField(Guild)
-    active = models.BooleanField()
+    guild_ranks = models.ManyToManyField(GuildRank)
     notes = models.TextField(null=True, blank=True)
     
     def __str__(self):
