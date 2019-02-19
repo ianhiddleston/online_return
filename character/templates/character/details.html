@@ -1,36 +1,37 @@
-<!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="UTF-8">
-    <title>title</title>
-  </head>
-  <body>
+{% extends 'character/base.html' %}
+
+{% block title %}Character Information{% endblock %}
+
+{% block content %}
     <h1>Character Home</h1>
     <p><a href='{% url 'character:index' %}'>Return to Character Home</a></p>
     <h1>Character List</h1>
     <p><a href='{% url 'character:list' %}'>Return to Character List</a></p>
     <h1>Character Details</h1>
-    <ul>
-      <li><p>Name : {{ character.name }}</p></li>
-      <li><p>Race : {{ character.race }}</p></li>
-      <li><p>Nationality : {{ character.nationality }}</p></li>
-      <li><p>State : {{ character.get_state_display }}</p></li>
-      <li><p>Resurrected : {{ character.resurrected }}</p></li>
-      <li><p>Excommunicated : {{ character.excommunicated }}</p></li>
+    <section>
+      <h2>Character Information</h2>
       <ul>
-        <h2>Guilds : </h2>
-        {% for guild in character.guilds.all %}
-        <li>{{guild.name}}</li>
+        <li><p>Name : {{ character.name }}</p></li>
+        <li><p>Race : {{ character.race }}</p></li>
+        <li><p>Nationality : {{ character.nationality }}</p></li>
+        <li><p>State : {{ character.get_state_display }}</p></li>
+        <li><p>Resurrected : {{ character.resurrected }}</p></li>
+        <li><p>Excommunicated : {{ character.excommunicated }}</p></li>
+      </ul>
+    </section>
+    <section>
+      <h2>Guilds</h2>
+      <ul>
+        {% for guild_rank in character.guild_ranks.all %}
+        <li>{{guild_rank.guild.name}}: {{guild_rank.name}}. Social Standing: {{guild_rank.social_standing}}</li>
         {% endfor %}
       </ul>
-      <li>
-        <h2>Languages : </h2>
-        <ul>
-          {% for language in character.languages.all %}
-          <li>{{language}}</li>
-          {% endfor %}
-        </ul>
-      </li>
-    </ul>
-  </body>
-</html>
+    </section>
+    <section>
+    <h2>Languages</h2>
+      <ul>
+        {% for language in character.languages.all %}
+        <li>{{language}}</li>
+        {% endfor %}
+      </ul>
+{% endblock %}

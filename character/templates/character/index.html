@@ -1,11 +1,8 @@
-<!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="UTF-8">
-    <title>title</title>
-  </head>
-  <body>
+{% extends 'character/base.html' %}
+
+{% block title %}Characters{% endblock %}
+
+{% block content %}
     <h1>Character List</h1>
     <p><a href='{% url 'character:list' %}'>View list of player characters</a></p>
-  </body>
-</html>
+{% endblock %}
