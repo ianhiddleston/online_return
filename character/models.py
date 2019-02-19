@@ -120,6 +120,7 @@ class GuildRank(models.Model):
     def starting_rank(self, guild):
         return GuildRank.objects.filter(guild=guild, starting_rank=True)
 
+
 class Character(models.Model):
     ACTIVE = 'A'
     DEAD = 'D'
@@ -132,15 +133,15 @@ class Character(models.Model):
         (RETIRED, 'Retired'),
         (NPC, 'NPC'),
     )
-    player = models.ForeignKey(Player, on_delete=models.CASCADE)
+    player = models.ForeignKey(Player, on_delete=models.PROTECT)
     name = models.CharField(max_length=200)
     state = models.CharField(max_length=2, choices=STATE_CHOICES)
     started = models.DateTimeField(default=now)
     ended = models.DateTimeField(null=True, blank=True)
     resurrected = models.BooleanField()
     excommunicated = models.BooleanField()
-    race = models.ForeignKey(Race, on_delete=models.CASCADE)
-    nationality = models.ForeignKey(Nationality, on_delete=models.CASCADE)
+    race = models.ForeignKey(Race, on_delete=models.PROTECT)
+    nationality = models.ForeignKey(Nationality, on_delete=models.PROTECT)
     languages = models.ManyToManyField(Language)
     guilds = models.ManyToManyField(Guild)
     guild_ranks = models.ManyToManyField(GuildRank)
@@ -196,3 +197,37 @@ class Character(models.Model):
 
     class Meta:
         ordering = ['name',]
+
+class Cash(models.Model):
+    character = models.ForeignKey(Character, on_delete=models.PROTECT)
+    balance = models.IntegerField(default=0)
+
+    def _balance(self):
+        aggregates = self.transactions.aggregate(sum=Sum('amount'))
+        sum = aggregates['sum']
+        return 0 if sum is None else sum
+
+# class Transaction(models.Model):
+#     # Every transfer of money should create two rows in this table.
+#     # (a) the debit from the source account
+#     # (b) the credit to the destination account
+#     transfer = models.ForeignKey('oscar_accounts.Transfer', models.CASCADE,
+#                                  related_name="transactions")
+#     account = models.ForeignKey('oscar_accounts.Account', models.CASCADE,
+#                                 related_name='transactions')
+#
+#     # The sum of this field over the whole table should always be 0.
+#     # Credits should be positive while debits should be negative
+#     amount = models.DecimalField(decimal_places=2, max_digits=12)
+#     date_created = models.DateTimeField(auto_now_add=True)
+#
+#     def __str__(self):
+#         return u"Ref: %s, amount: %.2f" % (
+#             self.transfer.reference, self.amount)
+#
+#     class Meta:
+#         unique_together = ('transfer', 'account')
+#         abstract = True
+#
+#     def delete(self, *args, **kwargs):
+#         raise RuntimeError("Transactions cannot be deleted")

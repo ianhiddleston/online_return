@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>{% block title %} {% endblock %}</title>
+  </head>
+  <body>
+    {% block login %}
+    {% if user.is_authenticated %}
+      <p>Welcome {{ user.username }}</p>
+      <p><a href="{% url 'logout' %}">Log Out</a></p>
+    {% else %}
+    <form method="post" action="{% url 'login' %}">
+      {% csrf_token %}
+      <p><label for="id_username">Username:</label> <input id="id_username" type="text" name="username" maxlength="30" /></p>
+      <p><label for="id_password">Password:</label> <input type="password" name="password" id="id_password" /></p>
+
+      <input type="submit" value="Log in" />
+      <input type="hidden" name="next" value="{{ next }}" />
+    </form>
+    {% endif %}
+    {% endblock %}
+    {% block header %}
+    {% endblock %}
+    {% block content %}
+    {% endblock %}
+  </body>
+</html>
