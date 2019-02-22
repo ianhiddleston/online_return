@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'character.apps.CharacterConfig',
+    'signup.apps.SignUpConfig',
     'django.contrib.admin',
 ]
 
@@ -102,6 +103,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 # Redirect to home URL after login (Default redirects to /accounts/profile/)
 LOGIN_REDIRECT_URL = '/character/'
+LOGOUT_REDIRECT_URL = '/character/'
 
 # Set email to go to console for now. Will add full mail support later.
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'

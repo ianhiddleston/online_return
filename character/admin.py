@@ -1,7 +1,7 @@
 from django.contrib import admin
-from django.contrib.auth.admin import UserAdmin
+from django.contrib.auth.admin import UserAdmin as AuthUserAdmin
 from django.contrib.auth.models import User
-from .models import Branch, Player, Race, Nationality, Language, Guild, GuildRank, Character
+from character.models import Branch, Player, Race, Nationality, Language, Guild, GuildRank, Character
 
 # Register your models here.
 admin.site.register(Branch)
@@ -14,20 +14,22 @@ admin.site.register(GuildRank)
 admin.site.register(Character)
 
 
-class ProfileInline(admin.StackedInline):
+class UserProfileInline(admin.StackedInline):
     model = Player
+    max_num = 1
     can_delete = False
     verbose_name_plural = 'Player Profile'
     fk_name = 'user'
 
-class CustomUserAdmin(UserAdmin):
-    inlines = (ProfileInline, )
+class UserAdmin(AuthUserAdmin):
+   def add_view(self, *args, **kwargs):
+      self.inlines = []
+      return super(UserAdmin, self).add_view(*args, **kwargs)
 
-    def get_inline_instances(self, request, obj=None):
-        if not obj:
-            return list()
-        return super(CustomUserAdmin, self).get_inline_instances(request, obj)
+   def change_view(self, *args, **kwargs):
+      self.inlines = [UserProfileInline]
+      return super(UserAdmin, self).change_view(*args, **kwargs)
 
 
 admin.site.unregister(User)
-admin.site.register(User, CustomUserAdmin)
+admin.site.register(User, UserAdmin)
