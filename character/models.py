@@ -84,10 +84,13 @@ class Guild(models.Model):
     name = models.CharField(max_length=100, primary_key=True)
     restricted = models.BooleanField()
     banned_races = models.ManyToManyField(Race, blank=True)
-
+    
+    def starting_rank(self):
+        return GuildRank.objects.filter(guild=guild, starting_rank=True)
+    
     def __str__(self):
         return self.name
-
+    
     class Meta:
         ordering = ('name',)
 
@@ -118,8 +121,6 @@ class GuildRank(models.Model):
             #May return a restricted rank, the player may not advance to this without permission.
             return GuildRank.objects.filter(guild=guild, rank__gte=current_rank).order_by('rank')[:1]
 
-    def starting_rank(self, guild):
-        return GuildRank.objects.filter(guild=guild, starting_rank=True)
 
 
 class Character(models.Model):
@@ -127,13 +128,14 @@ class Character(models.Model):
     DEAD = 'D'
     RETIRED = 'R'
     NPC = 'N'
-    MAX_GUILDS = 3
+    MAX_GUILDS = 5
     STATE_CHOICES = (
         (ACTIVE, 'Active'),
         (DEAD, 'Dead'),
         (RETIRED, 'Retired'),
         (NPC, 'NPC'),
     )
+    
     player = models.ForeignKey(Player, on_delete=models.PROTECT)
     name = models.CharField(max_length=200)
     state = models.CharField(max_length=2, choices=STATE_CHOICES, default=ACTIVE)
@@ -204,7 +206,7 @@ class Cash(models.Model):
     balance = models.IntegerField(default=0)
 
     def _balance(self):
-        aggregates = self.transactions.aggregate(sum=Sum('pennies'))
+        aggregates = self.character.transactions.aggregate(sum=Sum('pennies'))
         sum = aggregates['sum']
         return 0 if sum is None else sum
     def save(self, *args, **kwargs):
@@ -234,7 +236,7 @@ class Transaction(models.Model):
     pennies = models.IntegerField(default=0)
     date_created = models.DateTimeField(auto_now_add=True)
     transaction_type = models.CharField(max_length=2, choices=STATE_CHOICES)
-    reference=models.CharField(max_length=100, unique=True, default=uuid.uuid4, primary_key=True)
+    reference=models.UUIDField(default=uuid.uuid4, primary_key=True, editable=False)
     character = models.ForeignKey(Character, on_delete=models.PROTECT)
 
     def __str__(self):

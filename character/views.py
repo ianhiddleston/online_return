@@ -17,7 +17,7 @@ def player(request):
 @login_required
 def list(request):
     #Get user Player details
-    current_player = Player.objects.get(user=request.user)
+    current_player = request.user.player
     characters =  Character.objects.filter(player=current_player)
     current_characters = characters.filter(state=Character.ACTIVE)
     previous_characters = characters.exclude(state=Character.ACTIVE)
@@ -33,5 +33,25 @@ def details(request, character_id):
 
 @login_required
 def create_character(request):
-    form = CharacterCreate()
-    return render(request, 'create.html', { 'form': form })
+    if request.method == 'POST':
+        #Need to split these up, manytomany won't work until the character has a primary_key
+        character_form = CharacterCreate(request.POST)
+        if character_form.is_valid():
+            character = character_form.save(commit=False)
+            character.player = request.user.player
+            for guild in character.guilds:
+                #Add the starting guild rank for each guild picked at creation.
+                character.guild_ranks.add(guild.starting_rank())
+            character.save()
+            return redirect('/character/')
+    else:
+        #Can't create a character if you have an active character.
+        current_player = Player.objects.get(user=request.user)
+        characters =  Character.objects.filter(player=current_player).filter(state=Character.ACTIVE).count()
+        if characters > 0:
+            return HttpResponse('Unauthorized: You have a currently active character.', status=401)
+        else:
+            character_form = CharacterCreate()
+    return render(request, 'create.html', {
+        'character_form': character_form,
+    })
