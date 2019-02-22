@@ -1,9 +1,6 @@
 from django.contrib.auth import login, authenticate
 from django.contrib.auth.models import Group
-from django.contrib.auth.decorators import login_required
-from django.shortcuts import render, redirect, get_object_or_404
-from django.http import HttpResponse
-from character.models import Player
+from django.shortcuts import render, redirect
 from signup.forms import SignUpForm, ProfileForm
 
 def signup(request):

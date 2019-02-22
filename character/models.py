@@ -5,6 +5,7 @@ from django.utils.timezone import now
 from django.contrib.auth.models import User
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+import uuid
 
 
 # Create your models here.
@@ -135,11 +136,11 @@ class Character(models.Model):
     )
     player = models.ForeignKey(Player, on_delete=models.PROTECT)
     name = models.CharField(max_length=200)
-    state = models.CharField(max_length=2, choices=STATE_CHOICES)
+    state = models.CharField(max_length=2, choices=STATE_CHOICES, default=ACTIVE)
     started = models.DateTimeField(default=now)
     ended = models.DateTimeField(null=True, blank=True)
-    resurrected = models.BooleanField()
-    excommunicated = models.BooleanField()
+    resurrected = models.BooleanField(default=False)
+    excommunicated = models.BooleanField(default=False)
     race = models.ForeignKey(Race, on_delete=models.PROTECT)
     nationality = models.ForeignKey(Nationality, on_delete=models.PROTECT)
     languages = models.ManyToManyField(Language)
@@ -203,31 +204,48 @@ class Cash(models.Model):
     balance = models.IntegerField(default=0)
 
     def _balance(self):
-        aggregates = self.transactions.aggregate(sum=Sum('amount'))
+        aggregates = self.transactions.aggregate(sum=Sum('pennies'))
         sum = aggregates['sum']
         return 0 if sum is None else sum
+    def save(self, *args, **kwargs):
+        # Ensure the balance is always current when saving
+        self.balance = self._balance()
+        return super(Model, self).save(*args, **kwargs)
 
-# class Transaction(models.Model):
-#     # Every transfer of money should create two rows in this table.
-#     # (a) the debit from the source account
-#     # (b) the credit to the destination account
-#     transfer = models.ForeignKey('oscar_accounts.Transfer', models.CASCADE,
-#                                  related_name="transactions")
-#     account = models.ForeignKey('oscar_accounts.Account', models.CASCADE,
-#                                 related_name='transactions')
-#
-#     # The sum of this field over the whole table should always be 0.
-#     # Credits should be positive while debits should be negative
-#     amount = models.DecimalField(decimal_places=2, max_digits=12)
-#     date_created = models.DateTimeField(auto_now_add=True)
-#
-#     def __str__(self):
-#         return u"Ref: %s, amount: %.2f" % (
-#             self.transfer.reference, self.amount)
-#
-#     class Meta:
-#         unique_together = ('transfer', 'account')
-#         abstract = True
-#
-#     def delete(self, *args, **kwargs):
-#         raise RuntimeError("Transactions cannot be deleted")
+class Transaction(models.Model):
+    # Track income vs expenditure.
+    # Track whether for mission pay or goods or service
+    # Track when it occured.
+
+    SOLD_ITEMS = 'S'
+    BOUGHT_ITEMS = 'B'
+    MISSION_PAY = 'P'
+    MATERIAL_COST = 'C'
+    FINE = 'F'
+    TITHE = 'T'
+    STATE_CHOICES = (
+        (SOLD_ITEMS, 'Sold Items'),
+        (BOUGHT_ITEMS, 'Bought Items'),
+        (MISSION_PAY, 'Mission Pay'),
+        (MATERIAL_COST, 'Material Cost'),
+        (FINE, 'Fine'),
+        (TITHE, 'Tithe'),
+    )
+    pennies = models.IntegerField(default=0)
+    date_created = models.DateTimeField(auto_now_add=True)
+    transaction_type = models.CharField(max_length=2, choices=STATE_CHOICES)
+    reference=models.CharField(max_length=100, unique=True, default=uuid.uuid4, primary_key=True)
+    character = models.ForeignKey(Character, on_delete=models.PROTECT)
+
+    def __str__(self):
+        return u"Ref: %s, amount: %.2f" % (
+            self.transaction_type, self.pennies)
+
+    def to_crowns(self):
+        #12 pence to the crown. Output as Crowns and Pence, actually only work with pence because fuck base 12.
+        crowns = self.pennies // 12
+        pence = self.pennies % 12
+        return "{0}/{1}".format(crowns, pence)
+
+    def delete(self, *args, **kwargs):
+        raise RuntimeError("Transactions cannot be deleted")
