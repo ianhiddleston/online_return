@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+
+{% block title %}Resurrect Character{% endblock %}
+
+{% block content %}
+<h1>Resurrect Character: {{ character.name }}</h1>
+<form method="post">
+  {% csrf_token %}
+  <p><input type=submit value=Resurrect /></p>
+  <p><a href='{% url 'character:details' character.ref %}'>Cancel</a></p>
+</form>
+{% endblock %}

@@ -7,17 +7,18 @@
     {% if current_characters %}
       <ul>
       {% for character in current_characters %}
-          <li><a href='{% url 'character:details' character.id %}'>{{ character.name }}</a></li>
+          <li><a href='{% url 'character:details' character.ref %}'>{{ character.name }}</a></li>
       {% endfor %}
       </ul>
     {% else %}
       <p>No current characters are available.</p>
+      <p><a href='{% url 'character:create_character' %}'>Create a new character.</a></p>
     {% endif %}
   <h2>Previous Characters</h2>
     {% if previous_characters %}
       <ul>
       {% for character in previous_characters %}
-          <li><a href='{% url 'character:details' character.id %}'>{{ character.name }}</a></li>
+          <li><a href='{% url 'character:details' character.ref %}'>{{ character.name }}</a></li>
       {% endfor %}
       </ul>
     {% else %}

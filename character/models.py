@@ -86,7 +86,7 @@ class Guild(models.Model):
     banned_races = models.ManyToManyField(Race, blank=True)
     
     def starting_rank(self):
-        return GuildRank.objects.filter(guild=guild, starting_rank=True)
+        return GuildRank.objects.filter(guild=self, starting_rank=True).first()
     
     def __str__(self):
         return self.name
@@ -135,14 +135,16 @@ class Character(models.Model):
         (RETIRED, 'Retired'),
         (NPC, 'NPC'),
     )
-    
+    ref = models.UUIDField(default=uuid.uuid4, primary_key=True, editable=False)
     player = models.ForeignKey(Player, on_delete=models.PROTECT)
     name = models.CharField(max_length=200)
     state = models.CharField(max_length=2, choices=STATE_CHOICES, default=ACTIVE)
     started = models.DateTimeField(default=now)
     ended = models.DateTimeField(null=True, blank=True)
     resurrected = models.BooleanField(default=False)
+    resurrected_on = models.DateTimeField(null=True, blank=True)
     excommunicated = models.BooleanField(default=False)
+    excommunicated_on = models.DateTimeField(null=True, blank=True)
     race = models.ForeignKey(Race, on_delete=models.PROTECT)
     nationality = models.ForeignKey(Nationality, on_delete=models.PROTECT)
     languages = models.ManyToManyField(Language)
@@ -154,46 +156,56 @@ class Character(models.Model):
         return ( self.name )
 
     def is_active(self):
-        return self.status == ACTIVE
+        return self.state == Character.ACTIVE
 
     def is_dead(self):
-        return self.status == DEAD
+        return self.state == Character.DEAD
 
     def is_retired(self):
-        return self.status == RETIRED
+        return self.state == Character.RETIRED
 
     def is_npc(self):
-        return self.status == NPC
+        return self.state == Character.NPC
 
     def retire(self):
         if self.is_active() :
-            self.state = RETIRED
+            self.state = Character.RETIRED
             self.ended = now()
         else :
-            raise exception("Character is not active so cannot retire.")
+            raise Exception("Character is not active so cannot retire.")
 
     def die(self):
         if not self.is_dead():
-            self.state = DEAD
+            self.state = Character.DEAD
             self.ended = now()
         else:
-            raise exception("Character is already dead.")
+            raise Exception("Character is already dead.")
+    
+    def resurrect(self):
+        if self.resurrected:
+            raise Exception("Characters cannot be resurrected more than once. Please contact an admin.")
+        if self.is_dead():
+            self.state = Character.ACTIVE
+            self.resurrected_on = now()
+            self.resurrected = True
+        else:
+            raise Exception("Unexpected error, you don't appear to need resurrection.")
 
     def turn_npc(self):
         if not self.is_dead():
-            self.state = NPC
+            self.state = Character.NPC
         else:
-            raise exception("Character is already dead.")
+            raise Exception("Character is already dead.")
         if self.ended == None:
             self.ended = now()
 
     def join_guild(self, guild):
         character_guilds = self.guilds.all()
-        if len(character_guilds) < MAX_GUILDS:
+        if len(character_guilds) < Character.MAX_GUILDS:
             self.guilds.add(guild)
             self.guild_ranks.add(GuildRank.next_rank(guild))
         else:
-            raise exception("Character a member of too many guilds: " + str(current_guilds))
+            raise Exception("Character a member of too many guilds: " + str(current_guilds))
 
     def leave_guild(self, guild):
         pass

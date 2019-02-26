@@ -14,9 +14,35 @@
         <li><p>Name : {{ character.name }}</p></li>
         <li><p>Race : {{ character.race }}</p></li>
         <li><p>Nationality : {{ character.nationality }}</p></li>
-        <li><p>State : {{ character.get_state_display }}</p></li>
-        <li><p>Resurrected : {{ character.resurrected }}</p></li>
-        <li><p>Excommunicated : {{ character.excommunicated }}</p></li>
+        <li>
+          <p>State : {{ character.get_state_display }}</p>
+          {% if character.is_active %}
+          <ul>
+            <li><p><a href='{% url 'character:retire' character_id=character.ref %}'>Retire this character</a></p></li>
+            <li><p><a href='{% url 'character:die' character_id=character.ref %}'>Mark character as dead</a></p></li>
+          </ul>
+          {% endif %}
+          {% if character.is_retired %}
+          <p>Retired on: {{ character.ended }}</p>
+          {% elif character.is_dead %}
+            <p>Died on: {{ character.ended }}</p>
+            {% if not character.resurrected %}
+              <p><a href='{% url 'character:resurrect' character_id=character.ref %}'>Resurrect this character. You need to arrange this with another Player Character.</a></p></li>
+            {% endif %}
+          {% elif character.is_npc %}
+          <p>Became an NPC on: {{ character.ended }}</p>
+          {% endif %}
+        </li>
+        <li><p>Resurrected : {{ character.resurrected }}</p>
+          {% if character.resurrected %}
+            <p>Returned fron the dead on: {{ character.resurrected_on }}</p>
+          {% endif %}
+        </li>
+        <li><p>Excommunicated : {{ character.excommunicated }}</p>
+          {% if excommunicated %}
+            <p>Turned from the light of the gods on: {{ character.excommunicated_on }}
+          {% endif %}
+        </li>
       </ul>
     </section>
     <section>
