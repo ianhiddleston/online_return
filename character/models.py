@@ -2,6 +2,7 @@ from django.db import models
 from django.conf import settings
 from django.core.validators import RegexValidator, MinValueValidator, MaxValueValidator
 from django.utils.timezone import now
+from datetime import date
 from django.contrib.auth.models import User
 from django.db.models.signals import post_save
 from django.dispatch import receiver
@@ -80,6 +81,12 @@ class Language(models.Model):
     class Meta:
         ordering = ('name',)
 
+class SocialPosition(models.Model):
+    #This modifier allows a character to accumulate additional
+    name = models.CharField(max_length=100, primary_key=True)
+    social_change = models.SmallIntegerField(validators=[MinValueValidator(0), MaxValueValidator(5)])
+    at_branch = models.ForeignKey(Branch, null=True, blank=True, on_delete=models.CASCADE)
+
 class Guild(models.Model):
     name = models.CharField(max_length=100, primary_key=True)
     restricted = models.BooleanField()
@@ -136,7 +143,7 @@ class Character(models.Model):
         (NPC, 'NPC'),
     )
     ref = models.UUIDField(default=uuid.uuid4, primary_key=True, editable=False)
-    player = models.ForeignKey(Player, on_delete=models.PROTECT)
+    player = models.ForeignKey(Player, on_delete=models.CASCADE)
     name = models.CharField(max_length=200)
     state = models.CharField(max_length=2, choices=STATE_CHOICES, default=ACTIVE)
     started = models.DateTimeField(default=now)
@@ -167,6 +174,9 @@ class Character(models.Model):
     def is_npc(self):
         return self.state == Character.NPC
 
+    def is_excommunicated(self):
+        return self.excommunicated
+
     def retire(self):
         if self.is_active() :
             self.state = Character.RETIRED
@@ -190,6 +200,13 @@ class Character(models.Model):
             self.resurrected = True
         else:
             raise Exception("Unexpected error, you don't appear to need resurrection.")
+    
+    def excommunicate(self):
+        if self.excommunicated:
+            raise Exception("Character is already excommunicated. Please contact an admin.")
+        else:
+            self.excommunicated_on = now()
+            self.excommunicated = True
 
     def turn_npc(self):
         if not self.is_dead():
@@ -198,27 +215,66 @@ class Character(models.Model):
             raise Exception("Character is already dead.")
         if self.ended == None:
             self.ended = now()
+    
+    def get_social_modifier(self, branch=None):
+        #Returns the total social modifier
+        total_modifier = 0
+        socialpositions = self.socialposition_set.all()
+        for position in socialpositions:
+            if branch is not None:
+                if position.at_branch == branch:
+                    total_modifier += position.social_change
+            else:
+                if position.at_branch is None:
+                    total_modifier += position.social_change
+        return total_modifier
+            
+    
+    def get_brands(self):
+        return self.brand_set.all()
+    
+    def get_social(self, guild=None):
+        if self.excommunicated:
+            #Excommunicated characters have a social standing of 1.
+            return 1
+        if Guild is not None:
+            #Get the highest rank in the specified guild and return the social from that plus any modifier.
+            #Note the order_by is descending, it'll return only the guild_rank with the highest social standing.
+            guild_rank = self.guild_ranks.filter(guild=guild).order_by('-social_standing').first()
+            social_standing = guild_rank.social_standing
+        else:
+            highest_standing = self.guild_ranks.all().aggregate(Max('social_standing'))
+            social_standing = highest_standing
+            if social_standing is None:
+                social_standing = 2
+        return social_standing
 
     def join_guild(self, guild):
-        character_guilds = self.guilds.all()
-        if len(character_guilds) < Character.MAX_GUILDS:
+        number_guilds = self.guilds.count()
+        if number_guilds < Character.MAX_GUILDS:
             self.guilds.add(guild)
             self.guild_ranks.add(GuildRank.next_rank(guild))
         else:
             raise Exception("Character a member of too many guilds: " + str(current_guilds))
 
     def leave_guild(self, guild):
-        pass
+        self.guilds.remove(guild)
 
     class Meta:
         ordering = ['name',]
+
+
+class Brand(models.Model):
+    reason = models.CharField(max_length=100, primary_key=True)
+    applied_on = models.DateTimeField(null=True, blank=True)
+    applied_to = models.ForeignKey(Character, null=True, blank=True, on_delete=models.CASCADE)
 
 class Cash(models.Model):
     character = models.ForeignKey(Character, on_delete=models.PROTECT)
     balance = models.IntegerField(default=0)
 
     def _balance(self):
-        aggregates = self.character.transactions.aggregate(sum=Sum('pennies'))
+        aggregates = self.character.transaction_set.aggregate(sum=Sum('pennies'))
         sum = aggregates['sum']
         return 0 if sum is None else sum
     def save(self, *args, **kwargs):
@@ -235,6 +291,7 @@ class Transaction(models.Model):
     BOUGHT_ITEMS = 'B'
     MISSION_PAY = 'P'
     MATERIAL_COST = 'C'
+    STARTING_CASH = 'I'
     FINE = 'F'
     TITHE = 'T'
     STATE_CHOICES = (
@@ -242,6 +299,7 @@ class Transaction(models.Model):
         (BOUGHT_ITEMS, 'Bought Items'),
         (MISSION_PAY, 'Mission Pay'),
         (MATERIAL_COST, 'Material Cost'),
+        (STARTING_CASH, 'Starting Cash'),
         (FINE, 'Fine'),
         (TITHE, 'Tithe'),
     )
@@ -249,7 +307,7 @@ class Transaction(models.Model):
     date_created = models.DateTimeField(auto_now_add=True)
     transaction_type = models.CharField(max_length=2, choices=STATE_CHOICES)
     reference=models.UUIDField(default=uuid.uuid4, primary_key=True, editable=False)
-    character = models.ForeignKey(Character, on_delete=models.PROTECT)
+    character = models.ForeignKey(Character, on_delete=models.CASCADE)
 
     def __str__(self):
         return u"Ref: %s, amount: %.2f" % (
@@ -263,3 +321,31 @@ class Transaction(models.Model):
 
     def delete(self, *args, **kwargs):
         raise RuntimeError("Transactions cannot be deleted")
+
+class Adventure(models.Model):
+    SOCIAL = 'S'
+    FIXED = 'F'
+    MILITIA = 'M'
+    SOCIAL_BONUS = 'SF'
+    STATE_CHOICES = (
+        (SOCIAL, 'Social'),
+        (FIXED, 'Fixed'),
+        (MILITIA, 'Militia Duty'),
+        (SOCIAL_BONUS, 'Social plus Bonus'),
+    )
+    date = models.DateField(default=date.today)
+    social = models.SmallIntegerField(validators=[MinValueValidator(0), MaxValueValidator(20)])
+    social_overridden = models.BooleanField(default=False)
+    bonus_amount = models.SmallIntegerField(default=0, validators=[MinValueValidator(0), MaxValueValidator(200)])
+    total_amount = models.SmallIntegerField(default=0, validators=[MinValueValidator(0), MaxValueValidator(200)])
+    total_overridden = models.BooleanField(default=False)
+    character = models.ForeignKey(Character, on_delete=models.CASCADE)
+    branch = models.ForeignKey(Branch, on_delete=models.PROTECT)
+    notes = models.TextField(null=True, blank=True)
+    reference = models.UUIDField(default=uuid.uuid4, primary_key=True, editable=False)
+    transaction = models.ForeignKey(Transaction, on_delete=models.CASCADE)
+    
+    def save(self, *args, **kwargs):
+        # Ensure the balance is always current when saving
+        self.balance = self._balance()
+        return super(Model, self).save(*args, **kwargs)

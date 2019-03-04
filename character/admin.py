@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as AuthUserAdmin
 from django.contrib.auth.models import User
-from character.models import Branch, Player, Race, Nationality, Language, Guild, GuildRank, Character
+from character.models import Branch, Player, Race, Nationality, Language, Guild, GuildRank, Character, Brand, SocialPosition, Adventure, Transaction
 
 # Register your models here.
 admin.site.register(Branch)
@@ -12,6 +12,10 @@ admin.site.register(Language)
 admin.site.register(Guild)
 admin.site.register(GuildRank)
 admin.site.register(Character)
+admin.site.register(Brand)
+admin.site.register(SocialPosition)
+admin.site.register(Adventure)
+admin.site.register(Transaction)
 
 
 class UserProfileInline(admin.StackedInline):

@@ -93,3 +93,19 @@ def create_character(request):
     return render(request, 'create.html', {
         'character_form': character_form,
     })
+
+@login_required
+def adventure(request, character_id):
+    character = get_object_or_404(Character, pk=character_id)
+    if character.player.user != request.user:
+        return HttpResponse('Unauthorized', status=401)
+    if request.method == 'POST':
+        #Check character is active.
+        #Check
+        pass
+    else:
+        #Fill in defaults for social standing,
+        adventure_form = AdventureCreate()
+        pass
+    
+    
